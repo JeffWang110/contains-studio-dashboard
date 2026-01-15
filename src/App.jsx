@@ -1,4 +1,48 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+
+// Stripe 付費牆組件
+const StripePaymentLink = ({ url }) => (
+  <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
+    <div className="bg-white/10 backdrop-blur rounded-3xl p-8 max-w-md text-center border border-white/20">
+      <div className="text-6xl mb-4">🔒</div>
+      <h2 className="text-2xl font-bold text-white mb-3">免費額度已用完</h2>
+      <p className="text-gray-400 mb-6">
+        您已使用 3 次免費分析。升級至專業版以獲得無限次分析功能！
+      </p>
+      <a
+        href={url || "https://buy.stripe.com/your-payment-link"}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-block px-8 py-4 bg-gradient-to-r from-teal-500 to-teal-600 text-white rounded-xl font-bold hover:opacity-90 transition shadow-lg"
+      >
+        升級專業版 💎
+      </a>
+      <p className="text-gray-500 text-sm mt-4">
+        支援信用卡、Apple Pay、Google Pay
+      </p>
+    </div>
+  </div>
+);
+
+// 用戶狀態管理（模擬）
+const useUser = () => {
+  const [analysisCount, setAnalysisCount] = useState(() => {
+    const saved = localStorage.getItem('analysisCount');
+    return saved ? parseInt(saved) : 0;
+  });
+
+  const [isPaid, setIsPaid] = useState(() => {
+    return localStorage.getItem('isPaid') === 'true';
+  });
+
+  const incrementAnalysis = () => {
+    const newCount = analysisCount + 1;
+    setAnalysisCount(newCount);
+    localStorage.setItem('analysisCount', newCount.toString());
+  };
+
+  return { analysisCount, isPaid, incrementAnalysis, setIsPaid };
+};
 
 const departments = [
   {
@@ -133,6 +177,27 @@ const departments = [
       { name: 'joker', title: '開心果', desc: '用科技幽默緩和氣氛' },
     ]
   },
+  {
+    id: 'health',
+    name: '健康部',
+    nameEn: 'Health & Fitness',
+    icon: '🏃',
+    color: 'from-teal-500 to-teal-600',
+    bgLight: 'bg-teal-50',
+    border: 'border-teal-200',
+    textColor: 'text-teal-600',
+    agents: [
+      {
+        name: 'health-coach',
+        title: '動作分析教練',
+        desc: '專業的身體動作分析，提供姿勢矯正與訓練計畫',
+        features: ['video-analysis', 'posture-check', 'training-plan'],
+        systemPrompt: '你是一位專業的身體動作分析教練，能夠分析用戶的運動姿勢、提供姿勢矯正建議、制定個人化訓練計畫。'
+      },
+      { name: 'nutrition-advisor', title: '營養顧問', desc: '制定個人化飲食與營養計畫' },
+      { name: 'fitness-tracker', title: '健身追蹤師', desc: '追蹤運動數據並分析進步趨勢' },
+    ]
+  },
 ];
 
 function App() {
@@ -141,22 +206,54 @@ function App() {
   const [messages, setMessages] = useState([]);
   const [inputValue, setInputValue] = useState('');
 
+  // 付費牆相關狀態
+  const { analysisCount, isPaid, incrementAnalysis } = useUser();
+
+  // 檢查是否需要顯示付費牆（health-coach 專用）
+  const isHealthCoach = selectedAgent?.name === 'health-coach';
+  const showPaywall = isHealthCoach && !isPaid && analysisCount >= 3;
+
   const handleSendMessage = () => {
     if (!inputValue.trim()) return;
-    
+
     const userMsg = inputValue;
     setInputValue('');
-    
+
     setMessages(prev => [...prev, { role: 'user', content: userMsg }]);
-    
+
+    // 如果是 health-coach，增加分析次數
+    if (isHealthCoach) {
+      incrementAnalysis();
+    }
+
     // 模擬 AI 回應
     setTimeout(() => {
-      setMessages(prev => [...prev, { 
-        role: 'assistant', 
-        content: `[${selectedAgent.title}] 收到您的訊息！\n\n在實際部署環境中，這裡會連接 Claude API 並使用對應的 agent system prompt 來回應您的需求。\n\n您可以嘗試詢問與「${selectedAgent.desc}」相關的問題。` 
+      let response = `[${selectedAgent.title}] 收到您的訊息！\n\n`;
+
+      if (isHealthCoach) {
+        response += `🏃 身體動作分析報告\n\n`;
+        response += `在實際部署環境中，這裡會分析您上傳的影片或描述的動作問題。\n\n`;
+        response += `功能包含：\n`;
+        response += `• 📹 影片動作分析\n`;
+        response += `• 🧘 姿勢矯正建議\n`;
+        response += `• 📋 個人化訓練計畫\n\n`;
+        response += `（本次為第 ${analysisCount + 1}/3 次免費分析）`;
+      } else {
+        response += `在實際部署環境中，這裡會連接 Claude API 並使用對應的 agent system prompt 來回應您的需求。\n\n`;
+        response += `您可以嘗試詢問與「${selectedAgent.desc}」相關的問題。`;
+      }
+
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: response
       }]);
     }, 500);
   };
+
+  // 付費牆檢查 - 顯示 Stripe 付款連結
+  if (showPaywall) {
+    return <StripePaymentLink url="https://buy.stripe.com/your-payment-link" />;
+  }
 
   // 對話介面
   if (selectedAgent) {
@@ -177,13 +274,19 @@ function App() {
             </button>
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-xl">
-                🤖
+                {isHealthCoach ? '🏃' : '🤖'}
               </div>
               <div>
                 <h1 className="font-bold text-lg">{selectedAgent.title}</h1>
                 <p className="text-sm opacity-80 font-mono">{selectedAgent.name}</p>
               </div>
             </div>
+            {/* 顯示剩餘免費分析次數（僅 health-coach） */}
+            {isHealthCoach && !isPaid && (
+              <div className="ml-auto bg-white/20 px-3 py-1 rounded-full text-sm">
+                剩餘 {Math.max(0, 3 - analysisCount)} 次免費分析
+              </div>
+            )}
           </div>
         </div>
 
