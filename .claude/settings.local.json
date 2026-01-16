@@ -10,7 +10,8 @@
       "Bash(dir /s /b \"api\"\")",
       "Bash(npx vercel:*)",
       "WebFetch(domain:contains-studio-app.vercel.app)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "WebFetch(domain:agents.jeffwang.work)"
     ]
   }
 }
