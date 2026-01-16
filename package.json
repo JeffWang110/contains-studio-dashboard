@@ -1,7 +1,7 @@
 {
-  "name": "ai-agents-studio",
-  "version": "2.0.0",
-  "description": "AI Agents Studio - 中華電信 × 台積電 專案管理平台",
+  "name": "contains-studio-agents",
+  "version": "1.0.0",
+  "description": "Contains Studio AI Agents 部門介面",
   "private": true,
   "type": "module",
   "scripts": {

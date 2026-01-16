@@ -1,67 +1,54 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
+
+// Stripe 付費牆組件
+const StripePaymentLink = ({ url }) => (
+  <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
+    <div className="bg-white/10 backdrop-blur rounded-3xl p-8 max-w-md text-center border border-white/20">
+      <div className="text-6xl mb-4">🔒</div>
+      <h2 className="text-2xl font-bold text-white mb-3">免費額度已用完</h2>
+      <p className="text-gray-400 mb-6">
+        您已使用 3 次免費分析。升級至專業版以獲得無限次分析功能！
+      </p>
+      <a
+        href={url || "https://buy.stripe.com/your-payment-link"}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-block px-8 py-4 bg-gradient-to-r from-teal-500 to-teal-600 text-white rounded-xl font-bold hover:opacity-90 transition shadow-lg"
+      >
+        升級專業版 💎
+      </a>
+      <p className="text-gray-500 text-sm mt-4">
+        支援信用卡、Apple Pay、Google Pay
+      </p>
+    </div>
+  </div>
+);
+
+// 用戶狀態管理（模擬）
+const useUser = () => {
+  const [analysisCount, setAnalysisCount] = useState(() => {
+    const saved = localStorage.getItem('analysisCount');
+    return saved ? parseInt(saved) : 0;
+  });
+
+  const [isPaid, setIsPaid] = useState(() => {
+    return localStorage.getItem('isPaid') === 'true';
+  });
+
+  const incrementAnalysis = () => {
+    const newCount = analysisCount + 1;
+    setAnalysisCount(newCount);
+    localStorage.setItem('analysisCount', newCount.toString());
+  };
+
+  return { analysisCount, isPaid, incrementAnalysis, setIsPaid };
+};
 
 const departments = [
-  // ===== 電信專屬部門 =====
-  {
-    id: 'telecom',
-    name: '電信工程',
-    nameEn: 'Telecom Engineering',
-    icon: '📡',
-    color: 'from-cyan-500 to-cyan-600',
-    bgLight: 'bg-cyan-50',
-    border: 'border-cyan-200',
-    textColor: 'text-cyan-600',
-    agents: [
-      { name: '5g-planner', title: '5G 基站規劃師', desc: '5G 基站選址、覆蓋優化與容量規劃' },
-      { name: 'network-architect', title: '網路架構師', desc: '電信核心網路與傳輸系統設計' },
-      { name: 'fiber-engineer', title: '光纖工程師', desc: '光纖網路佈建、熔接與測試規劃' },
-      { name: 'enterprise-consultant', title: '企業通訊顧問', desc: '企業行動通訊與專網解決方案' },
-      { name: 'network-monitor', title: '網管監控師', desc: '網路效能監控與故障快速排除' },
-      { name: 'spectrum-analyst', title: '頻譜分析師', desc: '無線頻譜規劃與干擾分析' },
-    ]
-  },
-  // ===== 台積電專案部門 =====
-  {
-    id: 'tsmc',
-    name: '半導體設施',
-    nameEn: 'Semiconductor Facility',
-    icon: '🔬',
-    color: 'from-emerald-500 to-emerald-600',
-    bgLight: 'bg-emerald-50',
-    border: 'border-emerald-200',
-    textColor: 'text-emerald-600',
-    agents: [
-      { name: 'fab-network-planner', title: 'FAB 網路規劃師', desc: '晶圓廠無塵室網路基礎設施規劃' },
-      { name: 'cleanroom-comm', title: '無塵室通訊專家', desc: '無塵室環境特殊通訊需求解決方案' },
-      { name: 'equipment-iot', title: '設備聯網工程師', desc: '半導體設備 IoT 通訊與數據採集' },
-      { name: 'semiconductor-security', title: '半導體資安顧問', desc: '晶圓廠資安合規與網路隔離設計' },
-      { name: 'facility-coordinator', title: '廠務協調師', desc: '與台積電廠務團隊跨部門協調' },
-    ]
-  },
-  // ===== 電信專案管理部 =====
-  {
-    id: 'telecom-pm',
-    name: '電信專案管理',
-    nameEn: 'Telecom PM',
-    icon: '📊',
-    color: 'from-violet-500 to-violet-600',
-    bgLight: 'bg-violet-50',
-    border: 'border-violet-200',
-    textColor: 'text-violet-600',
-    agents: [
-      { name: 'telecom-pm', title: '電信專案經理', desc: '大型電信基礎建設專案全程管理' },
-      { name: 'vendor-coordinator', title: '廠商協調師', desc: '多方廠商進度協調與品質把關' },
-      { name: 'quotation-generator', title: '報價生成器', desc: '工程報價單與成本估算文件產出' },
-      { name: 'progress-tracker', title: '進度追蹤師', desc: '專案里程碑追蹤與風險預警' },
-      { name: 'cht-report-writer', title: '中華電信報告撰寫', desc: '符合中華電信格式的專案報告產出' },
-      { name: 'payment-tracker', title: '請款追蹤師', desc: '廠商請款進度與發票管理' },
-    ]
-  },
-  // ===== 軟體工程部 =====
   {
     id: 'engineering',
-    name: '軟體工程',
-    nameEn: 'Software Engineering',
+    name: '工程部',
+    nameEn: 'Engineering',
     icon: '💻',
     color: 'from-blue-500 to-blue-600',
     bgLight: 'bg-blue-50',
@@ -77,7 +64,6 @@ const departments = [
       { name: 'test-writer-fixer', title: '測試撰寫修復', desc: '撰寫能抓到真正 bug 的測試' },
     ]
   },
-  // ===== 設計部 =====
   {
     id: 'design',
     name: '設計部',
@@ -95,7 +81,6 @@ const departments = [
       { name: 'whimsy-injector', title: '驚喜注入師', desc: '為每個互動添加愉悅感' },
     ]
   },
-  // ===== 行銷部 =====
   {
     id: 'marketing',
     name: '行銷部',
@@ -110,10 +95,10 @@ const departments = [
       { name: 'content-creator', title: '內容創作者', desc: '跨平台生成內容' },
       { name: 'tiktok-strategist', title: 'TikTok 策略師', desc: '創造可分享的行銷時刻' },
       { name: 'twitter-engager', title: 'Twitter 互動師', desc: '搭上趨勢達成病毒式傳播' },
+      { name: 'reddit-community-builder', title: 'Reddit 社群建立者', desc: '在 Reddit 贏得關注而不被封禁' },
       { name: 'app-store-optimizer', title: '應用商店優化師', desc: '主宰應用商店搜尋結果' },
     ]
   },
-  // ===== 產品部 =====
   {
     id: 'product',
     name: '產品部',
@@ -129,11 +114,25 @@ const departments = [
       { name: 'sprint-prioritizer', title: 'Sprint 排序師', desc: '在 6 天內交付最大價值' },
     ]
   },
-  // ===== 營運部 =====
+  {
+    id: 'project-management',
+    name: '專案管理',
+    nameEn: 'Project Management',
+    icon: '📋',
+    color: 'from-indigo-500 to-indigo-600',
+    bgLight: 'bg-indigo-50',
+    border: 'border-indigo-200',
+    textColor: 'text-indigo-600',
+    agents: [
+      { name: 'project-shipper', title: '專案交付師', desc: '確保產品順利上線不崩潰' },
+      { name: 'studio-producer', title: '工作室製作人', desc: '讓團隊專注交付而非開會' },
+      { name: 'experiment-tracker', title: '實驗追蹤師', desc: '數據驅動的功能驗證' },
+    ]
+  },
   {
     id: 'studio-operations',
     name: '營運部',
-    nameEn: 'Operations',
+    nameEn: 'Studio Operations',
     icon: '⚙️',
     color: 'from-gray-500 to-gray-600',
     bgLight: 'bg-gray-50',
@@ -142,11 +141,11 @@ const departments = [
     agents: [
       { name: 'analytics-reporter', title: '數據分析報告', desc: '將數據轉化為可行動的洞察' },
       { name: 'finance-tracker', title: '財務追蹤師', desc: '保持工作室獲利' },
+      { name: 'infrastructure-maintainer', title: '基礎設施維護', desc: '擴展規模而不超支' },
       { name: 'legal-compliance-checker', title: '法規合規檢查', desc: '快速行動同時保持合法' },
       { name: 'support-responder', title: '客服回應師', desc: '將憤怒用戶轉化為擁護者' },
     ]
   },
-  // ===== 測試部 =====
   {
     id: 'testing',
     name: '測試部',
@@ -159,10 +158,11 @@ const departments = [
     agents: [
       { name: 'api-tester', title: 'API 測試師', desc: '確保 API 在壓力下正常運作' },
       { name: 'performance-benchmarker', title: '效能評測師', desc: '讓一切變得更快' },
+      { name: 'test-results-analyzer', title: '測試結果分析', desc: '在測試失敗中找出規律' },
+      { name: 'tool-evaluator', title: '工具評估師', desc: '選擇真正有幫助的工具' },
       { name: 'workflow-optimizer', title: '流程優化師', desc: '消除工作流程瓶頸' },
     ]
   },
-  // ===== 特別組 =====
   {
     id: 'bonus',
     name: '特別組',
@@ -175,7 +175,27 @@ const departments = [
     agents: [
       { name: 'studio-coach', title: '工作室教練', desc: '召集 AI 團隊達成卓越' },
       { name: 'joker', title: '開心果', desc: '用科技幽默緩和氣氛' },
-      { name: 'ziwei-advisor', title: '紫微顧問', desc: '結合紫微斗數的決策輔助參考' },
+    ]
+  },
+  {
+    id: 'health',
+    name: '健康部',
+    nameEn: 'Health & Fitness',
+    icon: '🏃',
+    color: 'from-teal-500 to-teal-600',
+    bgLight: 'bg-teal-50',
+    border: 'border-teal-200',
+    textColor: 'text-teal-600',
+    agents: [
+      {
+        name: 'health-coach',
+        title: '動作分析教練',
+        desc: '專業的身體動作分析，提供姿勢矯正與訓練計畫',
+        features: ['video-analysis', 'posture-check', 'training-plan'],
+        systemPrompt: '你是一位專業的身體動作分析教練，能夠分析用戶的運動姿勢、提供姿勢矯正建議、制定個人化訓練計畫。'
+      },
+      { name: 'nutrition-advisor', title: '營養顧問', desc: '制定個人化飲食與營養計畫' },
+      { name: 'fitness-tracker', title: '健身追蹤師', desc: '追蹤運動數據並分析進步趨勢' },
     ]
   },
 ];
@@ -185,31 +205,40 @@ function App() {
   const [selectedAgent, setSelectedAgent] = useState(null);
   const [messages, setMessages] = useState([]);
   const [inputValue, setInputValue] = useState('');
+
+  // 付費牆相關狀態
+  const { analysisCount, isPaid, incrementAnalysis } = useUser();
+
+  // 檢查是否需要顯示付費牆（health-coach 專用）
+  const isHealthCoach = selectedAgent?.name === 'health-coach';
+  const showPaywall = isHealthCoach && !isPaid && analysisCount >= 3;
+
   const [isLoading, setIsLoading] = useState(false);
-  const messagesEndRef = useRef(null);
 
-  // 自動滾動到最新訊息
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
-
-  // 呼叫 Gemini API
-  const sendMessage = async () => {
+  const handleSendMessage = async () => {
     if (!inputValue.trim() || isLoading) return;
 
-    const userMessage = inputValue.trim();
+    const userMsg = inputValue;
     setInputValue('');
-    setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
+
+    setMessages(prev => [...prev, { role: 'user', content: userMsg }]);
+
+    // 如果是 health-coach，增加分析次數
+    if (isHealthCoach) {
+      incrementAnalysis();
+    }
+
     setIsLoading(true);
 
     try {
+      // 呼叫 Gemini API (透過 Vercel serverless function)
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          message: userMessage,
+          message: userMsg,
           agentName: selectedAgent.name,
           agentTitle: selectedAgent.title,
           agentDesc: selectedAgent.desc,
@@ -217,33 +246,30 @@ function App() {
       });
 
       if (!response.ok) {
-        throw new Error('API request failed');
+        throw new Error('API 請求失敗');
       }
 
       const data = await response.json();
-      
-      setMessages(prev => [...prev, { 
-        role: 'assistant', 
-        content: data.reply 
-      }]);
 
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: data.reply
+      }]);
     } catch (error) {
       console.error('Error:', error);
-      setMessages(prev => [...prev, { 
-        role: 'assistant', 
-        content: '抱歉，發生了一些問題。請稍後再試。\n\n錯誤詳情：' + error.message 
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: `抱歉，發生錯誤：${error.message}\n\n請確認網路連線或稍後再試。`
       }]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleKeyPress = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
-    }
-  };
+  // 付費牆檢查 - 顯示 Stripe 付款連結
+  if (showPaywall) {
+    return <StripePaymentLink url="https://buy.stripe.com/your-payment-link" />;
+  }
 
   // 對話介面
   if (selectedAgent) {
@@ -264,17 +290,19 @@ function App() {
             </button>
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-xl">
-                🤖
+                {isHealthCoach ? '🏃' : '🤖'}
               </div>
               <div>
                 <h1 className="font-bold text-lg">{selectedAgent.title}</h1>
                 <p className="text-sm opacity-80 font-mono">{selectedAgent.name}</p>
               </div>
             </div>
-            <div className="ml-auto flex items-center gap-2 text-sm opacity-80">
-              <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
-              Gemini AI 已連線
-            </div>
+            {/* 顯示剩餘免費分析次數（僅 health-coach） */}
+            {isHealthCoach && !isPaid && (
+              <div className="ml-auto bg-white/20 px-3 py-1 rounded-full text-sm">
+                剩餘 {Math.max(0, 3 - analysisCount)} 次免費分析
+              </div>
+            )}
           </div>
         </div>
 
@@ -285,12 +313,9 @@ function App() {
               <div className="text-6xl mb-4">🤖</div>
               <p className="text-lg font-medium text-gray-600">{selectedAgent.title}</p>
               <p className="text-sm text-gray-500">{selectedAgent.desc}</p>
-              <div className="mt-6 flex flex-wrap gap-2 justify-center max-w-md">
-                <span className="text-xs bg-white px-3 py-1 rounded-full shadow">💬 開始對話</span>
-                <span className="text-xs bg-white px-3 py-1 rounded-full shadow">📋 詢問專案</span>
-                <span className="text-xs bg-white px-3 py-1 rounded-full shadow">🔧 技術諮詢</span>
-              </div>
-              <p className="mt-4 text-xs text-gray-400">由 Google Gemini AI 驅動</p>
+              <p className="mt-6 text-sm bg-white px-4 py-2 rounded-full shadow">
+                👋 開始對話來體驗此 Agent
+              </p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -305,18 +330,6 @@ function App() {
                   </div>
                 </div>
               ))}
-              {isLoading && (
-                <div className="flex justify-start">
-                  <div className="bg-white shadow-md rounded-2xl rounded-bl-sm p-4">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
-                    </div>
-                  </div>
-                </div>
-              )}
-              <div ref={messagesEndRef} />
             </div>
           )}
         </div>
@@ -328,31 +341,25 @@ function App() {
               type="text"
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
-              onKeyPress={handleKeyPress}
+              onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
               placeholder={`詢問 ${selectedAgent.title}...`}
-              disabled={isLoading}
-              className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-400 transition disabled:bg-gray-100"
+              className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-400 transition"
             />
             <button
-              onClick={sendMessage}
-              disabled={isLoading || !inputValue.trim()}
-              className={`px-6 py-3 bg-gradient-to-r ${dept.color} text-white rounded-xl hover:opacity-90 transition font-medium flex items-center gap-2 disabled:opacity-50`}
+              onClick={handleSendMessage}
+              disabled={isLoading}
+              className={`px-6 py-3 bg-gradient-to-r ${dept.color} text-white rounded-xl hover:opacity-90 transition font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed`}
             >
+              {isLoading ? '思考中...' : '發送'}
               {isLoading ? (
-                <>
-                  <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  處理中
-                </>
+                <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
               ) : (
-                <>
-                  發送
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                  </svg>
-                </>
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                </svg>
               )}
             </button>
           </div>
@@ -419,27 +426,20 @@ function App() {
   }
 
   // 部門選擇首頁
-  const featuredDepts = departments.filter(d => ['telecom', 'tsmc', 'telecom-pm'].includes(d.id));
-  const otherDepts = departments.filter(d => !['telecom', 'tsmc', 'telecom-pm'].includes(d.id));
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
       {/* Header */}
-      <div className="text-center py-10 px-4">
-        <div className="text-5xl mb-4">🏢</div>
-        <h1 className="text-4xl md:text-5xl font-bold text-white mb-2">
-          AI Agents Studio
+      <div className="text-center py-12 px-4">
+        <div className="text-6xl mb-4">🏢</div>
+        <h1 className="text-4xl md:text-5xl font-bold text-white mb-3">
+          Contains Studio
         </h1>
-        <p className="text-xl text-gray-400">中華電信 × 台積電 專案管理平台</p>
+        <p className="text-xl text-gray-400">AI Agents 部門介面</p>
         <p className="text-gray-500 mt-2">選擇部門以檢視可用的 AI Agents</p>
-        <div className="mt-3 inline-flex items-center gap-2 text-sm text-green-400 bg-green-400/10 px-3 py-1 rounded-full">
-          <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
-          Powered by Google Gemini AI
-        </div>
       </div>
 
       {/* Stats */}
-      <div className="max-w-3xl mx-auto px-6 mb-8">
+      <div className="max-w-2xl mx-auto px-6 mb-8">
         <div className="bg-white/5 backdrop-blur rounded-2xl p-4 flex justify-around text-center">
           <div>
             <div className="text-3xl font-bold text-white">{departments.length}</div>
@@ -454,28 +454,20 @@ function App() {
           </div>
           <div className="border-l border-white/10" />
           <div>
-            <div className="text-3xl font-bold text-cyan-400">CHT</div>
-            <div className="text-gray-400 text-sm">中華電信</div>
-          </div>
-          <div className="border-l border-white/10" />
-          <div>
-            <div className="text-3xl font-bold text-emerald-400">TSMC</div>
-            <div className="text-gray-400 text-sm">台積電</div>
+            <div className="text-3xl font-bold text-white">6天</div>
+            <div className="text-gray-400 text-sm">Sprint 週期</div>
           </div>
         </div>
       </div>
 
-      {/* Featured Departments */}
-      <div className="max-w-6xl mx-auto px-6 mb-6">
-        <h2 className="text-white text-lg font-semibold mb-4 flex items-center gap-2">
-          ⭐ 專屬部門
-        </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {featuredDepts.map((dept) => (
+      {/* Department Grid */}
+      <div className="max-w-6xl mx-auto px-6 pb-12">
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {departments.map((dept) => (
             <button
               key={dept.id}
               onClick={() => setSelectedDept(dept.id)}
-              className="group relative overflow-hidden rounded-2xl bg-white/10 backdrop-blur border-2 border-white/20 hover:border-white/40 p-6 text-left transition-all duration-300 hover:scale-[1.03] hover:bg-white/15"
+              className="group relative overflow-hidden rounded-2xl bg-white/5 backdrop-blur border border-white/10 hover:border-white/30 p-6 text-left transition-all duration-300 hover:scale-[1.03] hover:bg-white/10"
             >
               <div className={`w-14 h-14 rounded-xl bg-gradient-to-r ${dept.color} flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition-transform shadow-lg`}>
                 {dept.icon}
@@ -484,7 +476,7 @@ function App() {
               <h2 className="text-xl font-bold text-white mb-1">{dept.name}</h2>
               <p className="text-gray-400 text-sm mb-3">{dept.nameEn}</p>
               
-              <div className="flex items-center gap-2 text-gray-400">
+              <div className="flex items-center gap-2 text-gray-500">
                 <span className="text-sm">👥 {dept.agents.length} Agents</span>
               </div>
             </button>
@@ -492,33 +484,10 @@ function App() {
         </div>
       </div>
 
-      {/* Other Departments */}
-      <div className="max-w-6xl mx-auto px-6 pb-12">
-        <h2 className="text-white text-lg font-semibold mb-4 flex items-center gap-2">
-          📁 通用部門
-        </h2>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          {otherDepts.map((dept) => (
-            <button
-              key={dept.id}
-              onClick={() => setSelectedDept(dept.id)}
-              className="group relative overflow-hidden rounded-xl bg-white/5 backdrop-blur border border-white/10 hover:border-white/30 p-4 text-left transition-all duration-300 hover:bg-white/10"
-            >
-              <div className={`w-10 h-10 rounded-lg bg-gradient-to-r ${dept.color} flex items-center justify-center text-lg mb-3 group-hover:scale-110 transition-transform`}>
-                {dept.icon}
-              </div>
-              
-              <h2 className="text-sm font-bold text-white mb-0.5">{dept.name}</h2>
-              <p className="text-gray-500 text-xs">{dept.agents.length} Agents</p>
-            </button>
-          ))}
-        </div>
-      </div>
-
       {/* Footer */}
       <div className="text-center py-8 text-gray-500 text-sm border-t border-white/5">
-        <p>基於 Contains Studio Agents 專案客製化</p>
-        <p className="mt-1">⚡ 專為電信工程與半導體設施設計 · Powered by Gemini AI</p>
+        <p>基於 Contains Studio Agents 專案</p>
+        <p className="mt-1">⚡ 6 天 Sprint 快速開發流程</p>
       </div>
     </div>
   );
