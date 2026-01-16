@@ -7,7 +7,10 @@
       "Bash(git commit:*)",
       "Bash(git push:*)",
       "Bash(dir /b:*)",
-      "Bash(dir /s /b \"api\"\")"
+      "Bash(dir /s /b \"api\"\")",
+      "Bash(npx vercel:*)",
+      "WebFetch(domain:contains-studio-app.vercel.app)",
+      "Bash(curl:*)"
     ]
   }
 }
