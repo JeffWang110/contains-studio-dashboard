@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 
 // Stripe 付費牆組件
 const StripePaymentLink = ({ url }) => (
@@ -200,11 +200,21 @@ const departments = [
   },
 ];
 
+const INITIAL_FEEDBACK_FORM = {
+  name: '',
+  email: '',
+  message: '',
+  website: '',
+};
+
 function App() {
   const [selectedDept, setSelectedDept] = useState(null);
   const [selectedAgent, setSelectedAgent] = useState(null);
   const [messages, setMessages] = useState([]);
   const [inputValue, setInputValue] = useState('');
+  const [feedbackForm, setFeedbackForm] = useState(INITIAL_FEEDBACK_FORM);
+  const [feedbackStatus, setFeedbackStatus] = useState({ type: 'idle', message: '' });
+  const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
 
   // 付費牆相關狀態
   const { analysisCount, isPaid, incrementAnalysis } = useUser();
@@ -263,6 +273,78 @@ function App() {
       }]);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleFeedbackInputChange = (event) => {
+    const { name, value } = event.target;
+    setFeedbackForm((prev) => ({ ...prev, [name]: value }));
+    if (feedbackStatus.type !== 'idle') {
+      setFeedbackStatus({ type: 'idle', message: '' });
+    }
+  };
+
+  const handleFeedbackSubmit = async (event) => {
+    event.preventDefault();
+    if (isSubmittingFeedback) return;
+
+    const name = feedbackForm.name.trim();
+    const email = feedbackForm.email.trim();
+    const message = feedbackForm.message.trim();
+
+    if (!name || !email || !message) {
+      setFeedbackStatus({ type: 'error', message: '請完整填寫姓名、Email 與回饋內容。' });
+      return;
+    }
+
+    if (name.length > 80) {
+      setFeedbackStatus({ type: 'error', message: '姓名長度不可超過 80 字。' });
+      return;
+    }
+
+    if (email.length > 120) {
+      setFeedbackStatus({ type: 'error', message: 'Email 長度不可超過 120 字。' });
+      return;
+    }
+
+    if (message.length > 2000) {
+      setFeedbackStatus({ type: 'error', message: '回饋內容不可超過 2000 字。' });
+      return;
+    }
+
+    setIsSubmittingFeedback(true);
+
+    try {
+      const response = await fetch('/api/feedback', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name,
+          email,
+          message,
+          website: feedbackForm.website,
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || '送出失敗，請稍後再試。');
+      }
+
+      setFeedbackStatus({
+        type: 'success',
+        message: '感謝你的回饋，站長已收到訊息。',
+      });
+      setFeedbackForm(INITIAL_FEEDBACK_FORM);
+    } catch (error) {
+      setFeedbackStatus({
+        type: 'error',
+        message: error.message || '送出失敗，請稍後再試。',
+      });
+    } finally {
+      setIsSubmittingFeedback(false);
     }
   };
 
@@ -481,6 +563,96 @@ function App() {
               </div>
             </button>
           ))}
+        </div>
+      </div>
+
+      {/* Feedback */}
+      <div className="max-w-3xl mx-auto px-6 pb-12">
+        <div className="rounded-2xl border border-white/15 bg-white/5 backdrop-blur p-6 md:p-8">
+          <div className="mb-5">
+            <p className="text-xs uppercase tracking-[0.25em] text-teal-300">Feedback</p>
+            <h2 className="text-2xl font-bold text-white mt-2">給站長的意見回饋</h2>
+            <p className="text-gray-400 mt-1 text-sm">
+              你的建議會直接寄送到站長信箱：jeff110@cht.com.tw
+            </p>
+          </div>
+          <form onSubmit={handleFeedbackSubmit} className="space-y-4">
+            <input
+              type="text"
+              name="website"
+              tabIndex="-1"
+              autoComplete="off"
+              value={feedbackForm.website}
+              onChange={handleFeedbackInputChange}
+              className="hidden"
+              aria-hidden="true"
+            />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="feedback-name" className="text-sm text-gray-300 mb-1 block">姓名</label>
+                <input
+                  id="feedback-name"
+                  name="name"
+                  type="text"
+                  value={feedbackForm.name}
+                  onChange={handleFeedbackInputChange}
+                  maxLength={80}
+                  required
+                  className="w-full rounded-xl border border-white/20 bg-slate-900/60 px-4 py-3 text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-400"
+                  placeholder="請輸入你的姓名"
+                />
+              </div>
+              <div>
+                <label htmlFor="feedback-email" className="text-sm text-gray-300 mb-1 block">Email</label>
+                <input
+                  id="feedback-email"
+                  name="email"
+                  type="email"
+                  value={feedbackForm.email}
+                  onChange={handleFeedbackInputChange}
+                  maxLength={120}
+                  required
+                  className="w-full rounded-xl border border-white/20 bg-slate-900/60 px-4 py-3 text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-400"
+                  placeholder="name@example.com"
+                />
+              </div>
+            </div>
+            <div>
+              <label htmlFor="feedback-message" className="text-sm text-gray-300 mb-1 block">回饋內容</label>
+              <textarea
+                id="feedback-message"
+                name="message"
+                rows="5"
+                value={feedbackForm.message}
+                onChange={handleFeedbackInputChange}
+                maxLength={2000}
+                required
+                className="w-full rounded-xl border border-white/20 bg-slate-900/60 px-4 py-3 text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-400 resize-y"
+                placeholder="分享你的想法、需求或遇到的問題..."
+              />
+            </div>
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+              <p
+                className={`text-sm ${
+                  feedbackStatus.type === 'error'
+                    ? 'text-rose-300'
+                    : feedbackStatus.type === 'success'
+                      ? 'text-emerald-300'
+                      : 'text-gray-500'
+                }`}
+                aria-live="polite"
+              >
+                {feedbackStatus.message || '我們會盡快閱讀你的建議，謝謝。'}
+              </p>
+              <button
+                type="submit"
+                disabled={isSubmittingFeedback}
+                className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-teal-500 to-cyan-500 px-6 py-3 font-semibold text-slate-950 hover:opacity-90 transition disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {isSubmittingFeedback ? '送出中...' : '送出回饋'}
+              </button>
+            </div>
+          </form>
         </div>
       </div>
 
